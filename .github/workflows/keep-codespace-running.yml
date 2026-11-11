@@ -1,14 +1,13 @@
 name: keep-codespace-running
 
 # Starts the agent-os Codespace if it is stopped (or creates one if none exists).
-# Needs a repo secret CODESPACES_PAT: a fine-grained or classic PAT with the
-# "codespace" scope (the default GITHUB_TOKEN cannot manage codespaces).
-#
-# Private repos get ~2000 free Actions minutes/month and every run bills >=1 min,
-# so */30 (~1440/mo) fits. If the repo is public, Actions is free: change to */5.
+# Needs a repo secret CODESPACES_PAT: a PAT with the "codespace" scope
+# (the default GITHUB_TOKEN cannot manage codespaces).
+# Public repo => Actions minutes are free, so a 5-minute schedule is fine.
+# Note: GitHub may delay scheduled runs, and disables schedules after 60 days of repo inactivity.
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 concurrency:
