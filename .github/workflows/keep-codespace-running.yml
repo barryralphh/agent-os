@@ -1,0 +1,54 @@
+name: keep-codespace-running
+
+# Starts the agent-os Codespace if it is stopped (or creates one if none exists).
+# Needs a repo secret CODESPACES_PAT: a fine-grained or classic PAT with the
+# "codespace" scope (the default GITHUB_TOKEN cannot manage codespaces).
+#
+# Private repos get ~2000 free Actions minutes/month and every run bills >=1 min,
+# so */30 (~1440/mo) fits. If the repo is public, Actions is free: change to */5.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keep-codespace
+  cancel-in-progress: false
+
+jobs:
+  ensure-running:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.CODESPACES_PAT }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Check secret
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "Missing CODESPACES_PAT secret"; exit 1; fi
+
+      - name: Start or create codespace
+        run: |
+          set -euo pipefail
+          row=$(gh api "/repos/$REPO/codespaces" --jq '.codespaces[0] | [.name, .state] | @tsv' 2>/dev/null || true)
+          name=$(echo "$row" | cut -f1)
+          state=$(echo "$row" | cut -f2)
+
+          if [ -z "$name" ] || [ "$name" = "null" ]; then
+            echo "No codespace found, creating one..."
+            gh api -X POST "/repos/$REPO/codespaces" \
+              -f ref=main -f display_name=agent-os \
+              -F idle_timeout_minutes=240 -F retention_period_minutes=10080 >/dev/null
+            echo "Created."
+            exit 0
+          fi
+
+          echo "Codespace $name is $state"
+          case "$state" in
+            Available|Starting|Provisioning|Queued|Awaiting|Rebuilding)
+              echo "Nothing to do." ;;
+            *)
+              echo "Starting $name ..."
+              gh api -X POST "/user/codespaces/$name/start" >/dev/null
+              echo "Start requested." ;;
+          esac
