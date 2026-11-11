@@ -1,0 +1,37 @@
+# OmniRoute = model gateway (one OpenAI-compatible endpoint for many providers)
+# SwarmClaw is installed separately by scripts/setup.sh (it ships its own compose).
+
+services:
+  omniroute:
+    image: diegosouzapw/omniroute:latest
+    container_name: omniroute
+    restart: unless-stopped
+    stop_grace_period: 40s
+    ports:
+      - "127.0.0.1:20128:20128"   # localhost only; expose via reverse proxy/tunnel with a password
+    volumes:
+      - omniroute-data:/app/data
+    environment:
+      - INITIAL_PASSWORD=${INITIAL_PASSWORD}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Optional: durable DB for your own agent/project data.
+  # Start with: docker compose --profile db up -d
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["db"]
+    container_name: agentos-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=agentos
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=agentos
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+
+volumes:
+  omniroute-data:
+  pgdata:
