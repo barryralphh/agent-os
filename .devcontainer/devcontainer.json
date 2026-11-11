@@ -1,0 +1,16 @@
+{
+  "name": "agent-os",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
+  },
+  "hostRequirements": { "cpus": 2, "memory": "4gb" },
+  "forwardPorts": [3456, 20128],
+  "portsAttributes": {
+    "3456": { "label": "SwarmClaw", "onAutoForward": "notify" },
+    "20128": { "label": "OmniRoute", "onAutoForward": "notify" }
+  },
+  "postCreateCommand": "bash scripts/codespace-init.sh",
+  "postStartCommand": "bash scripts/codespace-start.sh"
+}
